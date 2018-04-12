@@ -15,12 +15,14 @@ class MyFarmware():
         self.input_openfarm_slug = os.environ.get(prefix+"_openfarm_slug", '*')
         self.input_age_min_day = int(os.environ.get(prefix+"_age_min_day", -1))
         self.input_age_max_day = int(os.environ.get(prefix+"_age_max_day", 36500))
+        self.input_plant_status = os.environ.get(prefix+"_filter_plant_status", '*')
         self.input_filter_meta_key = os.environ.get(prefix+"_filter_meta_key", 'None')
         self.input_filter_meta_value = os.environ.get(prefix+"_filter_meta_value", 'None')
         self.input_sequence_init = os.environ.get(prefix+"_sequence_init", 'None')
         self.input_sequence_beforemove  = os.environ.get(prefix+"_sequence_beforemove", 'None')
         self.input_sequence_aftermove = os.environ.get(prefix+"_sequence_aftermove", 'None')
         self.input_sequence_end = os.environ.get(prefix+"_sequence_end", 'None')
+        self.input_save_plant_status = os.environ.get(prefix+"_save_plant_status", 'None')
         self.input_save_meta_key = os.environ.get(prefix+"_save_meta_key", 'None')
         self.input_save_meta_value = os.environ.get(prefix+"_save_meta_value", 'None')
         self.input_default_z = int(os.environ.get(prefix+"_default_z", 0))
@@ -33,12 +35,14 @@ class MyFarmware():
             log('openfarm_slug: {}'.format(self.input_openfarm_slug), message_type='debug', title=self.farmwarename)
             log('age_min_day: {}'.format(self.input_age_min_day), message_type='debug', title=self.farmwarename)
             log('age_max_day: {}'.format(self.input_age_max_day), message_type='debug', title=self.farmwarename)
+            log('plant_status: {}'.format(self.input_plant_status), message_type='debug', title=self.farmwarename)
             log('filter_meta_key: {}'.format(self.input_filter_meta_key), message_type='debug', title=self.farmwarename)
             log('filter_meta_value: {}'.format(self.input_filter_meta_value), message_type='debug', title=self.farmwarename)
             log('sequence_init: {}'.format(self.input_sequence_init), message_type='debug', title=self.farmwarename)
             log('sequence_beforemove: {}'.format(self.input_sequence_beforemove), message_type='debug', title=self.farmwarename)
             log('sequence_aftermove: {}'.format(self.input_sequence_aftermove), message_type='debug', title=self.farmwarename)
             log('sequence_end: {}'.format(self.input_sequence_end), message_type='debug', title=self.farmwarename)
+            log('save_plant_status: {}'.format(self.input_save_plant_status), message_type='debug', title=self.farmwarename)
             log('save_meta_key: {}'.format(self.input_save_meta_key), message_type='debug', title=self.farmwarename)
             log('save_meta_value: {}'.format(self.input_save_meta_value), message_type='debug', title=self.farmwarename)
             log('default_z: {}'.format(self.input_default_z), message_type='debug', title=self.farmwarename)
@@ -66,7 +70,7 @@ class MyFarmware():
             log("{} -> {}".format(status_code,text), message_type='error', title=self.farmwarename + ' check_celerypy')
             raise
 
-    def apply_filters(self, points, point_name='', openfarm_slug='', age_min_day=0, age_max_day=36500, meta_key='', meta_value='', pointer_type='Plant'):
+    def apply_filters(self, points, point_name='', openfarm_slug='', age_min_day=0, age_max_day=36500, plant_status='', meta_key='', meta_value='', pointer_type='Plant'):
         if self.input_debug >= 1: log(points, message_type='debug', title=str(self.farmwarename) + ' : load_points')
         filtered_points = []
         now = datetime.datetime.utcnow()
@@ -81,7 +85,7 @@ class MyFarmware():
                         b_meta = False
                 else:
                     b_meta = True
-                if  (p['name'].lower() == point_name.lower() or point_name == '*') and (p['openfarm_slug'].lower() == openfarm_slug.lower() or openfarm_slug == '*') and (age_min_day <= age_day <= age_max_day) and b_meta==True:
+                if  (p['name'].lower() == point_name.lower() or point_name == '*') and (p['openfarm_slug'].lower() == openfarm_slug.lower() or openfarm_slug == '*') and (age_min_day <= age_day <= age_max_day) and (p['plant_status'].lower() == plant_status.lower() or plant_status == '*') and b_meta==True:
                     filtered_points.append(p.copy())
         return filtered_points
 
@@ -92,6 +96,7 @@ class MyFarmware():
             openfarm_slug=self.input_openfarm_slug,
             age_min_day=self.input_age_min_day,
             age_max_day=self.input_age_max_day,
+            plant_status=self.input_plant_status,
             meta_key=self.input_filter_meta_key,
             meta_value=self.input_filter_meta_value,
             pointer_type='Plant')
@@ -165,13 +170,41 @@ class MyFarmware():
                 endpoint = 'points/{}'.format(point['id'])
                 self.api.api_put(endpoint=endpoint, data=point)
 
+    def save_plant_status(self,point):
+        if str(self.input_save_plant_status).lower() != 'none':
+            if self.input_debug >= 1: log('Save Plant Status Information: ' + str(point['id']) , message_type='debug', title=str(self.farmwarename) + ' : save_plant_status')
+            if self.input_debug < 2 :
+                point['plant_status']=self.input_save_plant_status
+                endpoint = 'points/{}'.format(point['id'])
+                self.api.api_put(endpoint=endpoint, data=point)
+
+    def save_plant_point_data(self,point):
+        # Meta information to save?
+        if str(self.input_save_meta_key).lower() != 'none':
+            if self.input_debug >= 1: log('Save Meta Information: ' + str(point['id']) , message_type='debug', title=str(self.farmwarename) + ' : save_meta')
+            if self.input_debug < 2 :
+                point['meta'][self.input_save_meta_key]=self.input_save_meta_value
+                endpoint = 'points/{}'.format(point['id'])
+
+        # Plant status to save?
+        if str(self.input_save_plant_status).lower() != 'none':
+            if self.input_debug >= 1: log('Save Plant Status Information: ' + str(point['id']) , message_type='debug', title=str(self.farmwarename) + ' : save_plant_status')
+            if self.input_debug < 2 :
+                point['plant_status']=self.input_save_plant_status
+                endpoint = 'points/{}'.format(point['id'])
+
+        # now save
+        if ((str(self.input_save_meta_key).lower() != 'none') or (str(self.input_save_plant_status).lower() != 'none':)) and (self.input_debug < 2):
+                self.api.api_put(endpoint=endpoint, data=point)
+
+
 
     def loop_points(self):
         for p in self.points:
             self.execute_sequence_before()
             self.move_absolute_point(p)
             self.execute_sequence_after()
-            self.save_meta(p)
+            self.save_plant_point_data(p)
     
     
     def run(self):
