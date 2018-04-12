@@ -3,7 +3,7 @@
  "language": "python",
  "author": "fuzzynickel (orignal was rdegosse)",
  "description": "Loop plants with filters, execute sequences and save meta data : CONFIG Test",
- "version": "1.0.1",
+ "version": "1.0.2",
  "min_os_version_major": 6,
  "url": "https://raw.githubusercontent.com/fuzzynickel/Loop-Plants-With-Filters-Test/master/manifest.json",
  "zip": "https://github.com/fuzzynickel/Loop-Plants-With-Filters-Test/archive/master.zip",
